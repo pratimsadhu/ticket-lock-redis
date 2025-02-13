@@ -6,7 +6,9 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::services::redis::{check_ticket_lock, lock_ticket, release_ticket};
+use crate::services::redis::{
+    check_ticket_lock, get_all_locked_tickets, lock_ticket, release_ticket,
+};
 use redis::Client;
 
 #[derive(Deserialize)]
@@ -32,6 +34,7 @@ pub fn ticket_routes(redis_client: Arc<Client>) -> Router {
         .route("/lock", post(lock_ticket_handler))
         .route("/check/:ticket_id", get(check_ticket_handler))
         .route("/release", post(release_ticket_handler))
+        .route("/locked-tickets", get(get_all_locked_tickets_handler))
         .with_state(redis_client)
 }
 
@@ -81,5 +84,15 @@ async fn release_ticket_handler(
         _ => Json(ResponseMessage {
             message: "Failed to release ticket".to_string(),
         }),
+    }
+}
+
+async fn get_all_locked_tickets_handler(
+    State(redis_client): State<Arc<Client>>,
+) -> Json<Vec<String>> {
+    let result = get_all_locked_tickets(&redis_client).await;
+    match result {
+        Ok(tickets) => Json(tickets),
+        _ => Json(vec![]),
     }
 }
