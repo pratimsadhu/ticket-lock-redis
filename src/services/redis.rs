@@ -60,3 +60,25 @@ pub async fn release_ticket(
     }
     Ok(false)
 }
+
+/// Retrieves a list of all currently locked tickets from Redis.
+///
+/// This function queries Redis for all keys that match the `TICKET_LOCK_PREFIX`
+/// pattern, extracts the ticket IDs, and returns them as a vector of strings.
+///
+/// # Arguments
+/// * `redis_client` - A reference to the Redis client used to establish an async connection.
+///
+/// # Returns
+/// * `Ok(Vec<String>)` - A list of ticket IDs that are currently locked.
+/// * `Err(redis::RedisError)` - If there is an error communicating with Redis.
+pub async fn get_all_locked_tickets(redis_client: &redis::Client) -> RedisResult<Vec<String>> {
+    let mut conn = redis_client.get_async_connection().await?;
+    let mut keys: Vec<String> = conn.keys(format!("{}*", TICKET_LOCK_PREFIX)).await?;
+
+    keys = keys
+        .iter()
+        .map(|key| key.replace(TICKET_LOCK_PREFIX, ""))
+        .collect();
+    Ok(keys)
+}
