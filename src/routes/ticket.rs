@@ -1,0 +1,85 @@
+use axum::{
+    extract::{Path, State},
+    routing::{get, post},
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+use crate::services::redis::{check_ticket_lock, lock_ticket, release_ticket};
+use redis::Client;
+
+#[derive(Deserialize)]
+struct LockTicketRequest {
+    ticket_id: String,
+    user_id: String,
+    duration: u64,
+}
+
+#[derive(Deserialize)]
+struct ReleaseTicketRequest {
+    ticket_id: String,
+    user_id: String,
+}
+
+#[derive(Serialize)]
+struct ResponseMessage {
+    message: String,
+}
+
+pub fn ticket_routes(redis_client: Arc<Client>) -> Router {
+    Router::new()
+        .route("/lock", post(lock_ticket_handler))
+        .route("/check/:ticket_id", get(check_ticket_handler))
+        .route("/release", post(release_ticket_handler))
+        .with_state(redis_client)
+}
+
+async fn lock_ticket_handler(
+    State(redis_client): State<Arc<Client>>,
+    Json(payload): Json<LockTicketRequest>,
+) -> Json<ResponseMessage> {
+    let result = lock_ticket(
+        &redis_client,
+        &payload.ticket_id,
+        &payload.user_id,
+        payload.duration,
+    )
+    .await;
+    match result {
+        Ok(true) => Json(ResponseMessage {
+            message: "Ticket locked successfully".to_string(),
+        }),
+        _ => Json(ResponseMessage {
+            message: "Failed to lock ticket".to_string(),
+        }),
+    }
+}
+
+async fn check_ticket_handler(
+    State(redis_client): State<Arc<Client>>,
+    Path(ticket_id): Path<String>,
+) -> Json<ResponseMessage> {
+    let result = check_ticket_lock(&redis_client, &ticket_id).await;
+    match result {
+        Ok(Some(lock)) => Json(ResponseMessage { message: lock }),
+        _ => Json(ResponseMessage {
+            message: "Ticket is available".to_string(),
+        }),
+    }
+}
+
+async fn release_ticket_handler(
+    State(redis_client): State<Arc<Client>>,
+    Json(payload): Json<ReleaseTicketRequest>,
+) -> Json<ResponseMessage> {
+    let result = release_ticket(&redis_client, &payload.ticket_id, &payload.user_id).await;
+    match result {
+        Ok(true) => Json(ResponseMessage {
+            message: "Ticket released".to_string(),
+        }),
+        _ => Json(ResponseMessage {
+            message: "Failed to release ticket".to_string(),
+        }),
+    }
+}
