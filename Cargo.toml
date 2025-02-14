@@ -11,4 +11,7 @@ serde_json = "1"
 dotenv = "0.15"                  # Environment variables
 redis = { version = "0.23", features = ["tokio-comp"] }  # Redis async client
 uuid = { version = "1", features = ["v4"] }  # Generate unique IDs
+colored = "2.0"
+thiserror = "1.0"
+
 
