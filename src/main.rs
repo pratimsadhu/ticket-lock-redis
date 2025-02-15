@@ -33,7 +33,7 @@ async fn main() {
         .route("/", get(|| async { "Ticket Lock Service Running" }));
 
     // Set up server
-    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let port = std::env::var("SERVER_PORT").unwrap_or_else(|_| "3001".to_string());
     let addr = format!("0.0.0.0:{}", port);
 
     let listener = match TokioListener::bind(&addr).await {
