@@ -69,8 +69,8 @@ async fn check_ticket_handler(
     let result = check_ticket_lock(&redis_client, &ticket_id).await;
     match result {
         Ok(Some(lock)) => Json(LockedTicketResponse {
-            message: "Ticket is locked".to_string() + " by " + &lock,
-            data: vec![ticket_id],
+            message: "Ticket is locked".to_string(),
+            data: vec![lock],
         }),
         _ => Json(LockedTicketResponse {
             message: "Ticket is available".to_string(),
