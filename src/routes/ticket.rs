@@ -79,6 +79,24 @@ async fn check_ticket_handler(
     }
 }
 
+/// Handler to release a locked ticket
+///
+/// This handler releases a locked ticket by removing the lock from Redis.
+///
+/// # Returns
+///
+/// The JSON response containing the message and data.
+///
+/// # Example
+///
+/// ```json
+/// {
+///   "message": "Ticket released",
+///  "data": [
+///    "ticket_id"
+///   ]
+/// }
+/// ```
 async fn release_ticket_handler(
     State(redis_client): State<Arc<Client>>,
     Json(payload): Json<ReleaseTicketRequest>,
@@ -112,7 +130,7 @@ async fn release_ticket_handler(
 ///   "data": [
 ///      "ticket_id_1",
 ///     "ticket_id_2"
-/// ]
+///    ]
 /// }
 /// ```
 async fn get_all_locked_tickets_handler(
