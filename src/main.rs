@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tokio::net::TcpListener as TokioListener;
 
 mod config;
+mod models;
 mod routes;
 mod services;
 
