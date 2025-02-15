@@ -96,6 +96,25 @@ async fn release_ticket_handler(
     }
 }
 
+/// Handler to get all locked tickets
+///
+/// This handler retrieves all locked tickets from Redis and returns them as a JSON response.
+///
+/// # Returns
+///
+/// The JSON response containing the message and data.
+///
+/// # Example
+///
+/// ```json
+/// {
+///    "message": "Locked tickets retrieved",
+///   "data": [
+///      "ticket_id_1",
+///     "ticket_id_2"
+/// ]
+/// }
+/// ```
 async fn get_all_locked_tickets_handler(
     State(redis_client): State<Arc<Client>>,
 ) -> Json<LockedTicketResponse> {
