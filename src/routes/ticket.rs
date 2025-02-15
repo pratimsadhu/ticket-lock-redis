@@ -25,8 +25,9 @@ struct ReleaseTicketRequest {
 }
 
 #[derive(Serialize)]
-struct ResponseMessage {
+struct LockedTicketResponse {
     message: String,
+    data: Vec<String>,
 }
 
 pub fn ticket_routes(redis_client: Arc<Client>) -> Router {
@@ -41,7 +42,7 @@ pub fn ticket_routes(redis_client: Arc<Client>) -> Router {
 async fn lock_ticket_handler(
     State(redis_client): State<Arc<Client>>,
     Json(payload): Json<LockTicketRequest>,
-) -> Json<ResponseMessage> {
+) -> Json<LockedTicketResponse> {
     let result = lock_ticket(
         &redis_client,
         &payload.ticket_id,
@@ -50,11 +51,13 @@ async fn lock_ticket_handler(
     )
     .await;
     match result {
-        Ok(true) => Json(ResponseMessage {
+        Ok(true) => Json(LockedTicketResponse {
             message: "Ticket locked successfully".to_string(),
+            data: vec![payload.ticket_id],
         }),
-        _ => Json(ResponseMessage {
+        _ => Json(LockedTicketResponse {
             message: "Failed to lock ticket".to_string(),
+            data: vec![],
         }),
     }
 }
@@ -62,12 +65,16 @@ async fn lock_ticket_handler(
 async fn check_ticket_handler(
     State(redis_client): State<Arc<Client>>,
     Path(ticket_id): Path<String>,
-) -> Json<ResponseMessage> {
+) -> Json<LockedTicketResponse> {
     let result = check_ticket_lock(&redis_client, &ticket_id).await;
     match result {
-        Ok(Some(lock)) => Json(ResponseMessage { message: lock }),
-        _ => Json(ResponseMessage {
+        Ok(Some(lock)) => Json(LockedTicketResponse {
+            message: "Ticket is locked".to_string() + " by " + &lock,
+            data: vec![ticket_id],
+        }),
+        _ => Json(LockedTicketResponse {
             message: "Ticket is available".to_string(),
+            data: vec![ticket_id],
         }),
     }
 }
@@ -75,24 +82,32 @@ async fn check_ticket_handler(
 async fn release_ticket_handler(
     State(redis_client): State<Arc<Client>>,
     Json(payload): Json<ReleaseTicketRequest>,
-) -> Json<ResponseMessage> {
+) -> Json<LockedTicketResponse> {
     let result = release_ticket(&redis_client, &payload.ticket_id, &payload.user_id).await;
     match result {
-        Ok(true) => Json(ResponseMessage {
+        Ok(true) => Json(LockedTicketResponse {
             message: "Ticket released".to_string(),
+            data: vec![payload.ticket_id],
         }),
-        _ => Json(ResponseMessage {
-            message: "Failed to release ticket".to_string(),
+        _ => Json(LockedTicketResponse {
+            message: "Ticket isn't locked or failed to release ticket".to_string(),
+            data: vec![payload.ticket_id],
         }),
     }
 }
 
 async fn get_all_locked_tickets_handler(
     State(redis_client): State<Arc<Client>>,
-) -> Json<Vec<String>> {
+) -> Json<LockedTicketResponse> {
     let result = get_all_locked_tickets(&redis_client).await;
     match result {
-        Ok(tickets) => Json(tickets),
-        _ => Json(vec![]),
+        Ok(tickets) => Json(LockedTicketResponse {
+            message: "Locked tickets retrieved".to_string(),
+            data: tickets,
+        }),
+        Err(_) => Json(LockedTicketResponse {
+            message: "Failed to retrieve locked tickets".to_string(),
+            data: vec![],
+        }),
     }
 }
